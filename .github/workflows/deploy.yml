@@ -1,0 +1,70 @@
+
+name: Deploy Varchasvi Website
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main repository
+        uses: actions/checkout@v4
+        with:
+          path: site
+
+      - name: Prepare website directories
+        run: |
+          mkdir -p site/isha-proposal
+          mkdir -p site/wedding-invitation
+
+      - name: Fetch proposal website
+        env:
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          git clone --depth 1 \
+            https://github.com/$OWNER/isha-proposal.git /tmp/proposal || true
+          if [ -d /tmp/proposal ]; then
+            rsync -a --exclude='.git' \
+              /tmp/proposal/ site/isha-proposal/
+          fi
+
+      - name: Fetch wedding invitation
+        env:
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          git clone --depth 1 \
+            https://github.com/$OWNER/wedding-invitation.git /tmp/wedding || true
+          if [ -d /tmp/wedding ]; then
+            rsync -a --exclude='.git' \
+              /tmp/wedding/ site/wedding-invitation/
+          fi
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload website
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy website
+        id: deployment
+        uses: actions/deploy-pages@v4
