@@ -18,15 +18,15 @@ concurrency:
 
 jobs:
   deploy:
+    runs-on: ubuntu-latest
+
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
 
-    runs-on: ubuntu-latest
-
     steps:
       - name: Checkout main repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: site
 
@@ -40,29 +40,43 @@ jobs:
           OWNER: ${{ github.repository_owner }}
         run: |
           git clone --depth 1 \
-            https://github.com/$OWNER/isha-proposal.git /tmp/proposal || true
-          if [ -d /tmp/proposal ]; then
-            rsync -a --exclude='.git' \
-              /tmp/proposal/ site/isha-proposal/
-          fi
+            https://github.com/$OWNER/isha-proposal.git /tmp/proposal
+
+          rsync -a --exclude='.git' \
+            /tmp/proposal/ site/isha-proposal/
 
       - name: Fetch wedding invitation
         env:
           OWNER: ${{ github.repository_owner }}
         run: |
           git clone --depth 1 \
-            https://github.com/$OWNER/wedding-invitation.git /tmp/wedding || true
-          if [ -d /tmp/wedding ]; then
-            rsync -a --exclude='.git' \
-              /tmp/wedding/ site/wedding-invitation/
-          fi
+            https://github.com/$OWNER/wedding-invitation.git /tmp/wedding
+
+          rsync -a --exclude='.git' \
+            /tmp/wedding/ site/wedding-invitation/
+
+      - name: Verify website files
+        run: |
+          echo "Main website:"
+          ls -la site/
+
+          echo "Proposal website:"
+          ls -la site/isha-proposal/
+
+          echo "Wedding invitation:"
+          ls -la site/wedding-invitation/
+
+          test -f site/index.html
+          test -f site/isha-proposal/index.html
+          test -f site/wedding-invitation/index.html
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload website
-        uses: actions/upload-pages-artifact@v3
+      - name: Upload website artifact
+        uses: actions/upload-pages-artifact@v4
         with:
+          name: github-pages
           path: site
 
       - name: Deploy website
